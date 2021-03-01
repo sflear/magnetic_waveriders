@@ -2,11 +2,11 @@
 #define MAX_PWM_VALUE         255        //Maximum PWM duty cycle
 #define PID_UPDATE_INTERVAL   75          //PWM update interval, in microseconds. 0 = as fast as possible, likely unstable due to conditional branching & timing interrupts. Must be < gNextSensorReadout's maximum value
 
-#define DEFAULT_TARGET_VALUE  300       //Default target hall effect readout
-#define DEFAULT_KP            0.5      //Default Kp, proportional gain parameter
-#define DEFAULT_KD            0.1
+#define DEFAULT_TARGET_VALUE  220       //Default target hall effect readout
+//#define DEFAULT_KP            3         //Default Kp, proportional gain parameter
+#define DEFAULT_KD            150
 
-#define DEFAULT_KI            0.000     //Default Ki, integral gain parameter
+#define DEFAULT_KI            0     //Default Ki, integral gain parameter
 #define DEFAULT_MAX_INTEGRAL  5000      //Maximum integral term (limited by signed int below, change to long if > (32,767 - 1024) [1024 because that's the maximum that can be inserted before a constrain operation]
 
 #define KP_INCREMENT          0.01        //Increment used for serial commands (gKp)
@@ -14,7 +14,7 @@
 #define KI_INCREMENT          0.0001     //Increment used for serial commands (gKi)
 #define VALUE_INCREMENT       1          //Increment used for serial commands (gTargetValue)
 
-#define FILTERFACTOR 1                   //Weighting factor for hall sensor reading. We calculate a running average, with the most recent reading making up 1/FILTERFACTOR of the average. Lower = faster, higher = smoother
+#define FILTERFACTOR 10                   //Weighting factor for hall sensor reading. We calculate a running average, with the most recent reading making up 1/FILTERFACTOR of the average. Lower = faster, higher = smoother
 
 int roundValue(float value)
 {
@@ -101,21 +101,21 @@ void setup()
 //Used while in active mode
 void controlLoop()
 {
-  //Downcast millis to the type of the stored cycle argument, then calculate the difference as a signed number. If negative, the time hasn't passed yet. This allows us to do overflow-safe arithmetic
+  //Downcast micros to the type of the stored cycle argument, then calculate the difference as a signed number. If negative, the time hasn't passed yet. This allows us to do overflow-safe arithmetic
   if(0 <= ((typeof(gNextPIDCycle))micros() - gNextPIDCycle))
   {
     //By default, downcast to signed 16-bit int (safe), but can be changed to use longer intervals by changing the type of gNextPWMCycle
     gNextPIDCycle = micros() + PID_UPDATE_INTERVAL;
     
     //Read the sensor at least once in an update cycle
-    //gNextSensorReadout = roundValue(((gNextSensorReadout * (FILTERFACTOR - 1)) + analogRead(hallSensorPin)) / FILTERFACTOR); //USED TO ATTENUATE HOW RESPONSIVE THE SENSOR VALUE IS TO CHANGE IN SIGNAL
+    gNextSensorReadout = roundValue(((gNextSensorReadout * (FILTERFACTOR - 1)) + analogRead(hallSensorPin)) / FILTERFACTOR); //USED TO ATTENUATE HOW RESPONSIVE THE SENSOR VALUE IS TO CHANGE IN SIGNAL
 
-    gNextSensorReadout = analogRead(hallSensorPin);
+    //gNextSensorReadout = analogRead(hallSensorPin);
     //Serial.printl()
     int error = gTargetValue - gNextSensorReadout; //Difference between current and expected values (for proportional term)
  
     //Slope of the input over time (for derivative term). This is called Derivative on Measurement, as opposed to the more normal Derivative on Error. Used to reduce "derivative kick" when changing the set point, not a huge deal at our frequency
-    int dError = (gNextSensorReadout - gLastSensorReadout)/0.000075; 
+    int dError = (gNextSensorReadout - gLastSensorReadout); 
     
     gIntegralError = constrain(gIntegralError + error, -DEFAULT_MAX_INTEGRAL, DEFAULT_MAX_INTEGRAL); //Roughly constant error over time (for integral term)
     
@@ -129,6 +129,12 @@ void controlLoop()
     
     //Store for next calculation of dError
     gLastSensorReadout = gNextSensorReadout;
+  }
+  else //We're waiting for our next PID update cycle, just read the hall sensor for our filtering routine and return. We could also spin on this if we wanted more samples...
+  {
+    //This is a weighted average function. It basically takes FILTERFACTOR samples, replaces one with the current hall sensor value, and averages over that number of inputs.
+    //The higher the FILTERFACTOR, the slower the response (and the less important erroneous readings are)
+    gNextSensorReadout = roundValue(((gNextSensorReadout * (FILTERFACTOR - 1)) + analogRead(hallSensorPin)) / FILTERFACTOR);
   }
 }
 
