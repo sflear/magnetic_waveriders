@@ -3,7 +3,7 @@
 #define PID_UPDATE_INTERVAL   75          //PWM update interval, in microseconds. 0 = as fast as possible, likely unstable due to conditional branching & timing interrupts. Must be < gNextSensorReadout's maximum value
 
 #define DEFAULT_TARGET_VALUE  220       //Default target hall effect readout
-//#define DEFAULT_KP            3         //Default Kp, proportional gain parameter
+#define DEFAULT_KP            3         //Default Kp, proportional gain parameter
 #define DEFAULT_KD            150
 
 #define DEFAULT_KI            0     //Default Ki, integral gain parameter
