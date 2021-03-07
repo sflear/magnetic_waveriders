@@ -1,20 +1,20 @@
 #define MIN_PWM_VALUE         0          //Minimum PWM duty cycle
 #define MAX_PWM_VALUE         255        //Maximum PWM duty cycle
-#define PID_UPDATE_INTERVAL   75          //PWM update interval, in microseconds. 0 = as fast as possible, likely unstable due to conditional branching & timing interrupts. Must be < gNextSensorReadout's maximum value
+#define PID_UPDATE_INTERVAL   1          //PWM update interval, in microseconds. 0 = as fast as possible, likely unstable due to conditional branching & timing interrupts. Must be < gNextSensorReadout's maximum value
 
-#define DEFAULT_TARGET_VALUE  220       //Default target hall effect readout
-#define DEFAULT_KP            3         //Default Kp, proportional gain parameter
-#define DEFAULT_KD            150
+#define DEFAULT_TARGET_VALUE  200       //Default target hall effect readout
+#define DEFAULT_KP            2.9          //Default Kp, proportional gain parameter
+#define DEFAULT_KD            138
 
-#define DEFAULT_KI            0     //Default Ki, integral gain parameter
+#define DEFAULT_KI            0.000     //Default Ki, integral gain parameter
 #define DEFAULT_MAX_INTEGRAL  5000      //Maximum integral term (limited by signed int below, change to long if > (32,767 - 1024) [1024 because that's the maximum that can be inserted before a constrain operation]
 
 #define KP_INCREMENT          0.01        //Increment used for serial commands (gKp)
-#define KD_INCREMENT          0.1        //Increment used for serial commands (gKd)
+#define KD_INCREMENT          0.5        //Increment used for serial commands (gKd)
 #define KI_INCREMENT          0.0001     //Increment used for serial commands (gKi)
 #define VALUE_INCREMENT       1          //Increment used for serial commands (gTargetValue)
 
-#define FILTERFACTOR 10                   //Weighting factor for hall sensor reading. We calculate a running average, with the most recent reading making up 1/FILTERFACTOR of the average. Lower = faster, higher = smoother
+#define FILTERFACTOR          24                   //Weighting factor for hall sensor reading. We calculate a running average, with the most recent reading making up 1/FILTERFACTOR of the average. Lower = faster, higher = smoother
 
 int roundValue(float value)
 {
@@ -41,7 +41,7 @@ int gIntegralError = 0;  //Calculates running error over time
 void writeCoilPWM(int value)
 {
     OCR1B = value; 
-    OCR0A = value;
+    //OCR0A = value;
 }
 
 
@@ -72,7 +72,7 @@ void setup()
     // Setup timer 1 as Phase Correct non-inverted PWM, 31372.55 Hz.
     pinMode(12, OUTPUT);
     pinMode(11, OUTPUT);
-    GTCCR = _BV(TSM) | _BV(PSRSYNC); //GTCCR set to make sure both timers are synced
+    //GTCCR = _BV(TSM) | _BV(PSRSYNC); //GTCCR set to make sure both timers are synced
     // WGM20 is used for Phase Correct PWM, COM2A1/COM2B1 sets output to non-inverted
     TCCR1A = 0;
     TCCR1A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM20);
@@ -81,15 +81,15 @@ void setup()
     TCCR1B = _BV(CS20);
 
     // Setup timer 0 as Phase Correct inverted PWM, 31372.55 Hz.
-    pinMode(4, OUTPUT);
-    pinMode(13, OUTPUT);
+    //pinMode(4, OUTPUT);
+    ///pinMode(13, OUTPUT);
     // WGM20 is used for Phase Correct PWM, COM2A1/COM2B1/COM2A0/COM2B0 sets output to inverted
-    TCCR0A = 0;
-    TCCR0A = _BV(COM2A1)| _BV(COM2B1)|_BV(COM2A0)|_BV(COM2B0)|_BV(WGM20);
+    //TCCR0A = 0;
+    //TCCR0A = _BV(COM2A1)| _BV(COM2B1)|_BV(COM2A0)|_BV(COM2B0)|_BV(WGM20);
     // PWM frequency is 16MHz/255/2/<prescaler>, prescaler is 1 here by using CS20
-    TCCR0B = 0;
-    TCCR0B = _BV(CS20);
-    GTCCR = 0; //start both timers now
+    //TCCR0B = 0;
+    //TCCR0B = _BV(CS20);
+    //GTCCR = 0; //start both timers now
 
     
     pinMode(hallSensorPin, INPUT);
